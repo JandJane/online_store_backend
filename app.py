@@ -1,19 +1,9 @@
 from flask import Flask, jsonify, abort, make_response, request
 
-app = Flask(__name__)
+import db
 
-items = [
-    {
-        'name': 'Milk',
-        'category': 'Dairy',
-        'id': 12345
-    },
-    {
-        'name': 'Sausages',
-        'category': 'Meet',
-        'id': 324
-    },
-]
+app = Flask(__name__)
+db.init_app(app)
 
 
 @app.errorhandler(404)
@@ -34,16 +24,24 @@ def already_exists(error):
 @app.route('/api/v1.0/items/', methods=['GET'])
 @app.route('/api/v1.0/items', methods=['GET'])
 def get_items():
+    conn = db.get_db()
+    cur = conn.cursor()
+    cur.execute('SELECT * from items')
+    items = cur.fetchall()
+    items = [dict(item) for item in items]
     return jsonify({'items': items})
 
 
 @app.route('/api/v1.0/items/<int:item_id>/', methods=['GET'])
 @app.route('/api/v1.0/items/<int:item_id>', methods=['GET'])
 def get_item(item_id):
-    item = [item for item in items if item['id'] == item_id]
-    if len(item) == 0:
+    conn = db.get_db()
+    cur = conn.cursor()
+    cur.execute('SELECT * from items where id = %d' % item_id)
+    item = cur.fetchall()
+    if not len(item):
         abort(404)
-    return jsonify({'item': item[0]})
+    return jsonify({'item': dict(item[0])})
 
 
 @app.route('/api/v1.0/items/', methods=['POST'])
@@ -52,9 +50,13 @@ def create_item():
     if not request.json or 'id' not in request.json:
         abort(400)
 
+    # Check if item already exists
     item_id = request.json['id']
-    item = [item for item in items if item['id'] == item_id]
-    if len(item) != 0:
+    conn = db.get_db()
+    cur = conn.cursor()
+    cur.execute('SELECT * from items where id = %d' % item_id)
+    item = cur.fetchall()
+    if len(item):
         abort(403)
 
     item = {
@@ -62,34 +64,38 @@ def create_item():
         'name': request.json.get('name', ''),
         'category': request.json.get('category', "")
     }
-    items.append(item)
+    cur.execute('INSERT INTO items VALUES (?, ?, ?)', (item['id'], item['name'], item['category']))
+    conn.commit()
     return jsonify({'item': item}), 201
 
 
 @app.route('/api/v1.0/items/<int:item_id>/', methods=['PUT'])
 @app.route('/api/v1.0/items/<int:item_id>', methods=['PUT'])
 def update_item(item_id):
-    item = [item for item in items if item['id'] == item_id]
-    if len(item) == 0:
-        abort(404)
     if not request.json:
         abort(400)
     if 'name' in request.json and type(request.json['name']) != str:
         abort(400)
     if 'category' in request.json and type(request.json['category']) != str:
         abort(400)
-    item[0]['name'] = request.json.get('name', item[0]['name'])
-    item[0]['category'] = request.json.get('category', item[0]['category'])
-    return jsonify({'item': item[0]})
+
+    conn = db.get_db()
+    cur = conn.cursor()
+    if 'name' in request.json:
+        cur.execute('UPDATE items SET name = ? where id = ?', (request.json['name'],  item_id))
+    if 'category' in request.json:
+        cur.execute('UPDATE items SET category = ? where id = ?', (request.json['category'], item_id))
+    conn.commit()
+    return get_item(item_id)
 
 
 @app.route('/api/v1.0/items/<int:item_id>/', methods=['DELETE'])
 @app.route('/api/v1.0/items/<int:item_id>', methods=['DELETE'])
 def delete_task(item_id):
-    item = [item for item in items if item['id'] == item_id]
-    if len(item) == 0:
-        abort(404)
-    items.remove(item[0])
+    conn = db.get_db()
+    cur = conn.cursor()
+    cur.execute('DELETE FROM items WHERE id = %d' % item_id)
+    conn.commit()
     return jsonify({'result': True})
 
 
