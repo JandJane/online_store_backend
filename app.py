@@ -1,9 +1,23 @@
 from flask import Flask, jsonify, abort, make_response, request
+from flask_swagger_ui import get_swaggerui_blueprint
 
 import db
 
 app = Flask(__name__)
-db.init_app(app)
+
+db.init_app(app)  # inits database
+
+# init swagger
+SWAGGER_URL = '/swagger'
+API_URL = '/static/swagger.json'
+SWAGGERUI_BLUEPRINT = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={
+        'app_name': "Online Grocery Store"
+    }
+)
+app.register_blueprint(SWAGGERUI_BLUEPRINT, url_prefix=SWAGGER_URL)
 
 
 @app.errorhandler(404)
@@ -29,7 +43,7 @@ def get_items():
     cur.execute('SELECT * from items')
     items = cur.fetchall()
     items = [dict(item) for item in items]
-    return jsonify({'items': items})
+    return jsonify(items)
 
 
 @app.route('/api/v1.0/items/<int:item_id>/', methods=['GET'])
@@ -41,7 +55,7 @@ def get_item(item_id):
     item = cur.fetchall()
     if not len(item):
         abort(404)
-    return jsonify({'item': dict(item[0])})
+    return jsonify(dict(item[0]))
 
 
 @app.route('/api/v1.0/items/', methods=['POST'])
@@ -66,7 +80,7 @@ def create_item():
     }
     cur.execute('INSERT INTO items VALUES (?, ?, ?)', (item['id'], item['name'], item['category']))
     conn.commit()
-    return jsonify({'item': item}), 201
+    return jsonify(item), 201
 
 
 @app.route('/api/v1.0/items/<int:item_id>/', methods=['PUT'])
