@@ -7,7 +7,7 @@
   },
   "basePath": "/api/v1.0",
   "paths": {
-    "/items": {
+    "/item": {
       "post": {
         "tags": [
           "item"
@@ -20,7 +20,17 @@
             "description": "Item object that needs to be added to the store",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/Item"
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "required": false
+                },
+                "category": {
+                  "type": "string",
+                  "required": false
+              }
+            }
             }
           }
         ],
@@ -38,7 +48,9 @@
             "description": "Item with this id already exists"
           }
         }
-      },
+      }
+    },
+    "/items/" : {
       "get": {
         "tags": [
           "item"

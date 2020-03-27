@@ -58,28 +58,24 @@ def get_item(item_id):
     return jsonify(dict(item[0]))
 
 
-@app.route('/api/v1.0/items/', methods=['POST'])
-@app.route('/api/v1.0/items', methods=['POST'])
+@app.route('/api/v1.0/item/', methods=['POST'])
+@app.route('/api/v1.0/item', methods=['POST'])
 def create_item():
-    if not request.json or 'id' not in request.json:
+    if not request.json or 'name' not in request.json or not request.json['name'] or 'category' not in request.json \
+            or not request.json['category']:
         abort(400)
-
-    # Check if item already exists
-    item_id = request.json['id']
     conn = db.get_db()
     cur = conn.cursor()
-    cur.execute('SELECT * from items where id = %d' % item_id)
-    item = cur.fetchall()
-    if len(item):
-        abort(403)
-
     item = {
-        'id': request.json['id'],
         'name': request.json.get('name', ''),
         'category': request.json.get('category', "")
     }
-    cur.execute('INSERT INTO items VALUES (?, ?, ?)', (item['id'], item['name'], item['category']))
+    cur.execute('INSERT INTO items (name, category) VALUES (?, ?)', (item['name'], item['category']))
     conn.commit()
+    cur.execute('SELECT last_insert_rowid()')
+    id = cur.fetchall()
+    id = list(dict(id[0]).values())[0]
+    item['id'] = id
     return jsonify(item), 201
 
 
