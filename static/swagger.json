@@ -5,9 +5,9 @@
     "version": "1.0.0",
     "title": "Online Grocery Store"
   },
-  "basePath": "/api/v1.0",
+  "basePath": "",
   "paths": {
-    "/item": {
+    "/api/v1.0/item": {
       "post": {
         "tags": [
           "item"
@@ -18,19 +18,16 @@
             "in": "body",
             "name": "body",
             "description": "Item object that needs to be added to the store",
-            "required": true,
             "schema": {
               "type": "object",
               "properties": {
                 "name": {
-                  "type": "string",
-                  "required": false
+                  "type": "string"
                 },
                 "category": {
-                  "type": "string",
-                  "required": false
+                  "type": "string"
+                }
               }
-            }
             }
           }
         ],
@@ -50,7 +47,7 @@
         }
       }
     },
-    "/items/" : {
+    "/api/v1.0/items/": {
       "get": {
         "tags": [
           "item"
@@ -69,7 +66,7 @@
         }
       }
     },
-    "/items/{itemID}": {
+    "/api/v1.0/items/{itemID}": {
       "get": {
         "tags": [
           "item"
@@ -155,6 +152,119 @@
         "responses": {
           "200": {
             "description": "successful operation"
+          }
+        }
+      }
+    },
+    "/token/register": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Register new user",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "New user credentials",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "username": {
+                  "type": "string"
+                },
+                "password": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucessfully registered"
+          },
+          "403": {
+            "description": "User with this username already exists"
+          }
+        }
+      }
+    },
+    "/token/auth": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Log in",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "User credentials",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "username": {
+                  "type": "string"
+                },
+                "password": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucessfully logged in"
+          },
+          "401": {
+            "description": "Incorrect username or password"
+          }
+        }
+      }
+    },
+    "/token/refresh": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Refresh auth token",
+        "responses": {
+          "200": {
+            "description": "Auth token sucessfully refreshed"
+          },
+          "401": {
+            "description": "No cookie"
+          }
+        }
+      }
+    },
+    "/token/remove": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Log out",
+        "responses": {
+          "200": {
+            "description": "Sucessfully logged out"
+          }
+        }
+      }
+    },
+    "/token/validate": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Validate existing user token",
+        "responses": {
+          "200": {
+            "description": "User token is valid"
+          },
+          "201": {
+            "description": "User token is invalid"
           }
         }
       }
