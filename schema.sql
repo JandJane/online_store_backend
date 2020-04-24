@@ -1,9 +1,7 @@
-DROP TABLE IF EXISTS items;
-
 CREATE TABLE items (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT,
-  category TEXT
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(100),
+  category VARCHAR(100)
 );
 
 INSERT INTO items (name, category) VALUES ('Milk', 'Dairy');

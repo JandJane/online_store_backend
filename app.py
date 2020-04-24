@@ -7,10 +7,10 @@ from flask_jwt_extended import (
     get_jwt_identity, set_access_cookies,
     set_refresh_cookies, unset_jwt_cookies
 )
-
-import db
+from flask_mysqldb import MySQL
 
 app = Flask(__name__)
+db = MySQL(app)
 
 # Init JWT authorization
 app.config['JWT_TOKEN_LOCATION'] = ['cookies']
@@ -108,8 +108,7 @@ def logout():
 @app.route('/api/v1.0/items/', methods=['GET'])
 @app.route('/api/v1.0/items', methods=['GET'])
 def get_items():
-    conn = db.get_db()
-    cur = conn.cursor()
+    cur = db.connection.cursor()
     cur.execute('SELECT * from items')
     items = cur.fetchall()
     items = [dict(item) for item in items]
@@ -119,8 +118,7 @@ def get_items():
 @app.route('/api/v1.0/items/<int:item_id>/', methods=['GET'])
 @app.route('/api/v1.0/items/<int:item_id>', methods=['GET'])
 def get_item(item_id):
-    conn = db.get_db()
-    cur = conn.cursor()
+    cur = db.connection.cursor()
     cur.execute('SELECT * from items where id = %d' % item_id)
     item = cur.fetchall()
     if not len(item):
@@ -135,15 +133,14 @@ def create_item():
     if not request.json or 'name' not in request.json or not request.json['name'] or 'category' not in request.json \
             or not request.json['category']:
         abort(400)
-    conn = db.get_db()
-    cur = conn.cursor()
+    cur = db.connection.cursor()
     item = {
         'name': request.json.get('name', ''),
         'category': request.json.get('category', "")
     }
     cur.execute('INSERT INTO items (name, category) VALUES (?, ?)', (item['name'], item['category']))
-    conn.commit()
-    cur.execute('SELECT last_insert_rowid()')
+    db.connection.commit()
+    cur.execute('SELECT LAST_INSERT_ID()')
     id = cur.fetchall()
     id = list(dict(id[0]).values())[0]
     item['id'] = id
@@ -161,13 +158,12 @@ def update_item(item_id):
     if 'category' in request.json and type(request.json['category']) != str:
         abort(400)
 
-    conn = db.get_db()
-    cur = conn.cursor()
+    cur = db.connection.cursor()
     if 'name' in request.json:
-        cur.execute('UPDATE items SET name = ? where id = ?', (request.json['name'],  item_id))
+        cur.execute("UPDATE items SET name = '%s' where id = %d" % (request.json['name'],  item_id))
     if 'category' in request.json:
-        cur.execute('UPDATE items SET category = ? where id = ?', (request.json['category'], item_id))
-    conn.commit()
+        cur.execute("UPDATE items SET category = '%s' where id = %d" % (request.json['category'], item_id))
+    db.connection.commit()
     return get_item(item_id)
 
 
@@ -175,10 +171,9 @@ def update_item(item_id):
 @app.route('/api/v1.0/items/<int:item_id>', methods=['DELETE'])
 @jwt_required
 def delete_task(item_id):
-    conn = db.get_db()
-    cur = conn.cursor()
+    cur = db.connection.cursor()
     cur.execute('DELETE FROM items WHERE id = %d' % item_id)
-    conn.commit()
+    db.connection.commit()
     return jsonify({'result': True})
 
 

@@ -1,5 +1,5 @@
 flask
 flask-swagger-ui
-db-sqlite3
+flask-mysqldb
 flask-jwt-extended
 requests
