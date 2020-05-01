@@ -1,5 +1,0 @@
-flask
-flask-swagger-ui
-flask-mysqldb
-flask-jwt-extended
-requests
