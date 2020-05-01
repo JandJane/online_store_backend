@@ -1,5 +1,12 @@
 from time import sleep
 import requests
+import hashlib
+import redis
+import smtplib
+from email.message import EmailMessage
+import redis
+from rq import Worker, Queue, Connection
+from rq.job import Job
 from flask import Flask, jsonify, abort, make_response, request
 from flask_swagger_ui import get_swaggerui_blueprint
 from flask_jwt_extended import (
@@ -9,6 +16,9 @@ from flask_jwt_extended import (
     set_refresh_cookies, unset_jwt_cookies, get_raw_jwt
 )
 import mysql.connector
+
+from tasks import send_confirmation_letter
+
 
 app = Flask(__name__)
 
@@ -22,6 +32,11 @@ config = {
 sleep(10)
 db = mysql.connector.connect(**config)
 
+# Set up job queue
+redis_conn = redis.Redis(host='redis', port=6379)
+queue = Queue(connection=redis_conn)
+queue.empty()
+
 # Init JWT authorization
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 60
 app.config['JWT_HEADER_TYPE'] = ''
@@ -30,7 +45,7 @@ app.config['JWT_SECRET_KEY'] = 'super-secret'
 app.config['JWT_BLACKLIST_ENABLED'] = True
 app.config['JWT_BLACKLIST_TOKEN_CHECKS'] = 'refresh'
 jwt = JWTManager(app)
-USERS = {'admin': 'admin'}
+USERS = {'admin': {'password': 'admin', 'email_confirmed': True}}
 blacklist = set()
 
 # init swagger
@@ -81,21 +96,24 @@ def validate():
 @app.route('/token/register/', methods=['POST'])
 @app.route('/token/register', methods=['POST'])
 def register():
-    username = request.json.get('username', None)
+    username = request.json.get('email', None)
     password = request.json.get('password', None)
     if username in USERS:
         return jsonify({'error': 'User with this username already exists'}), 403
-    USERS[username] = password
-    return jsonify({'register': f'Sucessfully registered user {username}'}), 200
+    USERS[username] = {'password': password, 'email_confirmed': False}
+    queue.enqueue(send_confirmation_letter, username)
+    return jsonify({'register': 'Sucessfully registered new user. Please confirm your email.'}), 200
 
 
 @app.route('/token/auth/', methods=['POST'])
 @app.route('/token/auth', methods=['POST'])
 def login():
-    username = request.json.get('username', None)
+    username = request.json.get('email', None)
     password = request.json.get('password', None)
-    if username not in USERS or USERS[username] != password:
-        return jsonify({'login': False}), 401
+    if username not in USERS or USERS[username]['password'] != password:
+        return jsonify({'login': False, 'error': 'No user found with this email and password'}), 401
+    if not USERS[username]['email_confirmed']:
+        return jsonify({'login': False, 'error': 'Please confirm your email'}), 401
     access_token = create_access_token(identity=username)
     refresh_token = create_refresh_token(identity=username)
     resp = jsonify({'login': True, 'access_token': access_token, 'refresh_token': refresh_token})
@@ -120,6 +138,17 @@ def logout():
     blacklist.add(jti)
     resp = jsonify({'logout': True})
     return resp, 200
+
+
+@app.route('/email_confirmation/', methods=['GET'])
+@app.route('/email_confirmation', methods=['GET'])
+def confirm_email():
+    email = request.args.get('email')
+    encrypted_email = request.args.get('hash')
+    if hashlib.sha1((email + "salt").encode('utf-8')).hexdigest() != encrypted_email:
+        return jsonify({'error': 'Invalid confirmation link'}), 500
+    USERS[email]['email_confirmed'] = True
+    return jsonify({'success': True}), 200
 
 
 @app.route('/api/v1.0/items/', methods=['GET'])

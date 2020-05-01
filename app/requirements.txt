@@ -3,3 +3,5 @@ flask-swagger-ui
 mysql-connector-python
 flask-jwt-extended
 requests
+redis
+rq

@@ -197,7 +197,7 @@
             "schema": {
               "type": "object",
               "properties": {
-                "username": {
+                "email": {
                   "type": "string"
                 },
                 "password": {
@@ -209,7 +209,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Sucessfully registered"
+            "description": "Sucessfully registered. Now confirm your email."
           },
           "403": {
             "description": "User with this username already exists"
@@ -231,7 +231,7 @@
             "schema": {
               "type": "object",
               "properties": {
-                "username": {
+                "email": {
                   "type": "string"
                 },
                 "password": {
@@ -257,7 +257,7 @@
             }
           },
           "401": {
-            "description": "Incorrect username or password"
+            "description": "Incorrect username or password / Email not confirmed"
           }
         }
       }
